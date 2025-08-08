@@ -1,0 +1,116 @@
+<head>
+    <title>Dice Game</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+    <div style="text-align: center; border: 1px solid black; margin: 2.55%;">
+        <h1 class="user">Welcome</h1>
+        <h1 class="message"></h1>
+        <div class="output"></div>
+        <input name="user" type="text" value="user" maxlength="20">
+        <h1></h1>
+
+        <button class="btn1" style="margin-left: 45%;">
+            Join
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd"
+                    d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.28 10.28a.75.75 0 000-1.06l-3-3a.75.75 0 10-1.06 1.06l1.72 1.72H8.25a.75.75 0 000 1.5h5.69l-1.72 1.72a.75.75 0 101.06 1.06l3-3z"
+                    clip-rule="evenodd"></path>
+            </svg>
+        </button>
+
+        <!--
+        <button class="btn1">Join</button>
+    -->
+        <h1></h1>
+        <!--
+        <button class="btn2" style="display: none; margin-left: 48%;">Roll</button>
+    -->
+
+    <button class="btn2" style="display: none; margin-left: 45%;"> ROLL</button><br>
+    <button class="btn-next" style="display: none; margin-left: 10px;">Next Round</button>
+
+
+        <h1></h1>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        const socket = io();
+        const output = document.querySelector('.output');
+        const message = document.querySelector('.message');
+        const user = document.querySelector('input')
+        const btn1 = document.querySelector('.btn1');
+        const btn2 = document.querySelector('.btn2');
+    const btnNext = document.querySelector('.btn-next');
+    const topMessage = document.querySelector('.user');
+        btn1.addEventListener('click', function () {
+            let id = 'player_' + Math.floor(Date.now() * Math.random())
+            socket.emit('new player', id, user.value);
+            user.style.display = 'none';
+            btn1.style.display = 'none';
+            btn2.style.display = 'block';
+            topMessage.textContent = "Player: " + user.value;
+        })
+        socket.on('players', listPlayers);
+        btnNext.addEventListener('click', function () {
+            socket.emit('next_round');
+            btnNext.disabled = true;
+        });
+        btn2.addEventListener('click', function () {
+            socket.emit('roll');
+            btn2.disabled = true;
+        })
+        socket.on('roll_denied', function (msg) {
+            alert(msg);
+            btn2.disabled = true;
+        });
+        socket.on('inplay', checkWinner);
+        function checkWinner(data) {
+            message.innerHTML = data
+            // keep roll disabled until next round starts
+        }
+
+        function listPlayers(players) {
+            message.textContent = players.length > 0 ? `Round ${players[0].round}` : `First Round`;
+            output.innerHTML = 'players : ';
+            let allRolled = players.length > 1 && players.every(p => p.roll !== null);
+            let myName = topMessage.textContent.replace('Player: ', '');
+            let winner = players.find(p => p.winner);
+            players.forEach(function (player) {
+                let div = document.createElement('div');
+                let temp = player.roll == null ? 'waiting' : 'Roll:' + player.roll;
+                div.textContent = `${player.name} roll = ${temp}`;
+                div.style.color = player.winner ? 'green' : 'black';
+                output.appendChild(div);
+            });
+            if (players.length !== 1) {
+                // disable roll if all rolled, else enable
+                btn2.disabled = allRolled;
+                message.textContent += " (Multiplayer mode)";
+            } else {
+                btn2.disabled = true;
+                alert("Need more than 1 player.")
+            }
+            // Show Next Round button if all rolled (anyone can click)
+            if (allRolled) {
+                btnNext.style.display = 'inline-block';
+                btnNext.disabled = false;
+            } else {
+                btnNext.style.display = 'none';
+            }
+        }
+
+        socket.on('name taken', function (name) {
+            alert(`The name "${name}" is already taken. Please choose a different name.`);
+            user.style.display = 'block';
+            user.style.marginLeft = '43.4%'
+            btn1.style.display = 'block';
+            btn2.style.display = 'none';
+        });
+    </script>
+</body>
