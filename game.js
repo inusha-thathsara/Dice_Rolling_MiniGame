@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const  app = express();
 const port = 3000;
 const http = require('http').Server(app);
@@ -7,7 +8,13 @@ const lodash = require('lodash');
 let players =[];
 let round = 0;
 
-app.use(express.static(__dirname+'/public'));
+// Serve static assets from the public folder
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve the game page at root to avoid 404 on '/'
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'game.html'));
+});
 
 http.listen(port,function(){
     console.log('listening on *:'+port);
